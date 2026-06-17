@@ -15,3 +15,29 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+const uri = process.env.MONGO_DB_URI;
+
+// Create a MongoClient
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+client.connect()
+  .catch(err => console.error("Database connection error:", err));
+
+// Database case set to: [StartupForge]
+const database = client.db("StartupForge");
+
+const opportunityCollection = database.collection("Opportunities");
+const startupCollection = database.collection("Startups");
+const applicationCollection = database.collection("Applications");
+const paymentCollection = database.collection("Payments");
+const planCollection = database.collection("plans");
+const usersCollection = database.collection("user");
+const sessionCollection = database.collection("session");
+const subscriptionCollection = database.collection("subscriptions");
