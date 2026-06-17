@@ -126,3 +126,25 @@ async function verifyToken(req, res, next) {
     res.status(500).json({ error: "Internal server error during authentication" });
   }
 }
+
+// RBAC Middlewares
+const verifyCollaborator = async (req, res, next) => {
+  if (req.user?.role !== "collaborator") {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
+
+const verifyFounder = async (req, res, next) => {
+  if (req.user?.role !== "founder") {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
+
+const verifyAdmin = async (req, res, next) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).send({ message: "forbidden access" });
+  }
+  next();
+};
