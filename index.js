@@ -148,3 +148,9 @@ const verifyAdmin = async (req, res, next) => {
   }
   next();
 };
+
+// GET /
+// Root endpoint to verify that the StartupForge Backend API is running.
+app.get("/", (req, res) => {
+  res.send("StartupForge Backend API is running!");
+});
