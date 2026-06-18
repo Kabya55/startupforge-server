@@ -377,3 +377,24 @@ app.get("/api/startups/:id", async (req, res) => {
       }
     }
     res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Invalid ID format" });
+  }
+});
+
+// PATCH /api/startups/:id
+// Update a founder's startup profile. The operation validates that the logged-in founder is the owner.
+app.patch("/api/startups/:id", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const update = req.body;
+    const filter = { _id: new ObjectId(id), founder_email: req.user.email };
+    const updateDoc = {
+      $set: {
+        startup_name: update.startup_name,
+        logo: update.logo,
+        industry: update.industry,
+        description: update.description,
+        funding_stage: update.funding_stage
+      }
+    };
