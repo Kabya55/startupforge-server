@@ -172,3 +172,62 @@ app.get("/api/plans", async (req, res) => {
 });
 
 // POST /api/payments/create-checkout-session
+// Create a Stripe Checkout Session with dynamic pricing and metadata based on the selected package.
+app.post("/api/payments/create-checkout-session", async (req, res) => {
+  const { email, packageId } = req.body;
+  if (!email || !packageId) {
+    return res.status(400).send({ message: "email and packageId are required" });
+  }
+
+  let unitAmount = 0;
+  let packageName = "";
+
+  // Map prices in cents according to the package ID selected on the frontend
+  if (packageId === "founder_growth") {
+    unitAmount = 4900;
+    packageName = "StartupForge Growth Plan";
+  } else if (packageId === "founder_enterprise") {
+    unitAmount = 14900;
+    packageName = "StartupForge Enterprise Plan";
+  } else if (packageId === "collaborator_pro") {
+    unitAmount = 1999;
+    packageName = "StartupForge Collaborator Pro";
+  } else if (packageId === "collaborator_premium") {
+    unitAmount = 3999;
+    packageName = "StartupForge Collaborator Premium";
+  } else {
+    return res.status(400).send({ message: "Invalid or Free package selected" });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: packageName,
+              description: "Upgrade your account package tier.",
+            },
+            unit_amount: unitAmount,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/packages`,
+      customer_email: email,
+      // Save packageId in metadata for the success callback page
+      metadata: {
+        packageId: packageId,
+      },
+    });
+
+    res.send({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error("Stripe session creation error:", err);
+    res.status(500).send({ message: "Stripe error", error: err.message });
+  }
+});
