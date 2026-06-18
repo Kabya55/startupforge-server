@@ -342,3 +342,13 @@ app.get("/api/my/startups", verifyToken, verifyFounder, async (req, res) => {
   const query = { founder_email: req.user.email };
   const result = await startupCollection.findOne(query);
   res.send(result || {});
+});
+
+// GET /api/startups/count
+// Retrieve the total count of startups.
+app.get("/api/startups/count", async (req, res) => {
+  try {
+    const count = await startupCollection.countDocuments();
+    res.send({ totalStartups: count });
+  } catch (error) {
+    res.status(500).send({ message: "Failed to get count", error: error.message });
