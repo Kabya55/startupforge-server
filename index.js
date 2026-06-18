@@ -352,3 +352,28 @@ app.get("/api/startups/count", async (req, res) => {
     res.send({ totalStartups: count });
   } catch (error) {
     res.status(500).send({ message: "Failed to get count", error: error.message });
+  }
+});
+
+// GET /api/startups/:id
+// Retrieve a specific startup profile by its database ObjectId.
+app.get("/api/startups/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await startupCollection.findOne(query);
+    if (result) {
+      const filter = { startup_id: result._id.toString() };
+      const opportunityCount = await opportunityCollection.countDocuments(filter);
+      result.opportunityCount = opportunityCount;
+
+      if (result.founder_email) {
+        const founder = await usersCollection.findOne({
+          email: { $regex: `^${result.founder_email}$`, $options: "i" }
+        });
+        result.founder_name = founder ? founder.name : "Unknown Founder";
+      } else {
+        result.founder_name = "Unknown Founder";
+      }
+    }
+    res.send(result);
