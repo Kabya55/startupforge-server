@@ -398,3 +398,30 @@ app.patch("/api/startups/:id", verifyToken, verifyFounder, async (req, res) => {
         funding_stage: update.funding_stage
       }
     };
+    const result = await startupCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Update failed" });
+  }
+});
+
+// PATCH /api/startups/:id/status
+// Update a startup profile status (e.g. approved, rejected) (admin only).
+app.patch("/api/startups/:id/status", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).send({ message: "Status is required" });
+    }
+
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+      $set: {
+        status: status
+      }
+    };
+    const result = await startupCollection.updateOne(filter, updateDoc);
+
+    if (result.matchedCount === 0) {
