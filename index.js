@@ -297,3 +297,41 @@ app.post("/api/payments/confirm", async (req, res) => {
 
 // POST /api/startups
 // Create/register a new startup profile (founder only).
+app.post("/api/startups", verifyToken, verifyFounder, async (req, res) => {
+  const startup = req.body;
+  const newStartup = {
+    ...startup,
+    status: "pending",
+    createdAt: new Date(),
+  };
+  const result = await startupCollection.insertOne(newStartup);
+  res.send(result);
+});
+
+// GET /api/startups
+// Retrieve startup profiles, optionally filtered by status query parameter.
+app.get("/api/startups", async (req, res) => {
+  const query = {};
+  if (req.query.status) {
+    query.status = req.query.status;
+  }
+  const cursor = startupCollection.find(query);
+  const startups = await cursor.toArray();
+
+  for (const startup of startups) {
+    const filter = { startup_id: startup._id.toString() };
+    const opportunityCount = await opportunityCollection.countDocuments(filter);
+    startup.opportunityCount = opportunityCount;
+
+    // Fetch founder name dynamically
+    if (startup.founder_email) {
+      const founder = await usersCollection.findOne({
+        email: { $regex: `^${startup.founder_email}$`, $options: "i" }
+      });
+      startup.founder_name = founder ? founder.name : "Unknown Founder";
+    } else {
+      startup.founder_name = "Unknown Founder";
+    }
+  }
+  res.send(startups);
+});
