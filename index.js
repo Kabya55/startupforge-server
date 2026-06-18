@@ -335,3 +335,10 @@ app.get("/api/startups", async (req, res) => {
   }
   res.send(startups);
 });
+
+// GET /api/my/startups
+// Retrieve the startup profile associated with the currently logged-in founder.
+app.get("/api/my/startups", verifyToken, verifyFounder, async (req, res) => {
+  const query = { founder_email: req.user.email };
+  const result = await startupCollection.findOne(query);
+  res.send(result || {});
