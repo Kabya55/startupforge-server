@@ -231,3 +231,69 @@ app.post("/api/payments/create-checkout-session", async (req, res) => {
     res.status(500).send({ message: "Stripe error", error: err.message });
   }
 });
+
+// POST /api/payments/confirm
+// Verify Stripe payment using checkout session ID and upgrade the user's plan tier (case-insensitive email matching).
+app.post("/api/payments/confirm", async (req, res) => {
+  const { session_id } = req.body;
+  if (!session_id) {
+    return res.status(400).send({ message: "session_id is required" });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    if (session.payment_status !== "paid") {
+      return res.status(400).send({ message: "Payment was not successful" });
+    }
+
+    // Prevent duplicate payment transaction processing
+    const existing = await paymentCollection.findOne({ transaction_id: session.id });
+    if (existing) {
+      return res.send({ success: true, message: "Payment already processed", payment: existing });
+    }
+
+    const email = session.customer_details?.email || session.customer_email;
+    const purchasedPackage = session.metadata?.packageId;
+
+    if (!email) {
+      return res.status(400).send({ message: "No customer email associated with this session" });
+    }
+
+    // A) Store the transaction details including the purchased package tier in the Payments collection
+    const paymentRecord = {
+      user_email: email,
+      amount: session.amount_total / 100,
+      package_id: purchasedPackage || "unknown_package",
+      transaction_id: session.id,
+      payment_status: "Paid",
+      paid_at: new Date(),
+    };
+    await paymentCollection.insertOne(paymentRecord);
+
+    // B) Directly update the new subscription package in the Users collection (case-insensitive email matching)
+    if (purchasedPackage) {
+      const userUpdateResult = await usersCollection.updateOne(
+        { email: { $regex: `^${email}$`, $options: "i" } },
+        {
+          $set: {
+            package: purchasedPackage,
+            isPremium: true,
+            updatedAt: new Date()
+          }
+        }
+      );
+    }
+
+    res.send({
+      success: true,
+      message: `Payment recorded and profile package updated to ${purchasedPackage}`,
+      payment: paymentRecord
+    });
+  } catch (err) {
+    console.error("Payment confirmation error:", err);
+    res.status(500).send({ message: "Payment confirmation failed", error: err.message });
+  }
+});
+
+// POST /api/startups
+// Create/register a new startup profile (founder only).
