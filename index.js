@@ -154,3 +154,21 @@ const verifyAdmin = async (req, res, next) => {
 app.get("/", (req, res) => {
   res.send("StartupForge Backend API is running!");
 });
+
+
+// GET /api/plans
+// Retrieve details of plans. Returns a single plan if plan_id query parameter is specified, otherwise returns plan details.
+app.get("/api/plans", async (req, res) => {
+  try {
+    const query = {};
+    if (req.query.plan_id) {
+      query.id = req.query.plan_id;
+    }
+    const plan = await planCollection.findOne(query);
+    res.send(plan || { message: "Plan not found" });
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching plan", error: error.message });
+  }
+});
+
+// POST /api/payments/create-checkout-session
