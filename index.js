@@ -568,3 +568,12 @@ app.get("/api/opportunities/count", async (req, res) => {
 
 // GET /api/opportunities/:id
 // Retrieve a specific opportunity by its database ObjectId.
+app.get("/api/opportunities/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const result = await opportunityCollection.findOne({ _id: new ObjectId(id) });
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Invalid ID format" });
+  }
+});
