@@ -436,3 +436,56 @@ app.patch("/api/startups/:id/status", verifyToken, verifyAdmin, async (req, res)
 
 // DELETE /api/startups/:id
 // Delete a startup profile. Validates that the logged-in founder is the owner.
+app.delete("/api/startups/:id", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id), founder_email: req.user.email };
+    const result = await startupCollection.deleteOne(filter);
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Delete failed" });
+  }
+});
+
+// POST /api/opportunities
+// Create a new opportunity post (founder only, subject to subscription package limits).
+app.post("/api/opportunities", verifyToken, verifyFounder, async (req, res) => {
+  const opportunity = req.body;
+
+  const startup = await startupCollection.findOne({ founder_email: req.user.email });
+  if (!startup) {
+    return res.status(400).send({ message: "You must create a startup profile first before posting opportunities." });
+  }
+
+  if (startup.status?.toLowerCase() !== "approved") {
+    return res.status(403).send({ message: "Your startup profile must be approved by an Admin before you can post opportunities." });
+  }
+
+  const userPackageId = req.user.package || "founder_free";
+  const planConfig = await planCollection.findOne({ id: userPackageId });
+
+  let maxLimit = 3;
+  if (planConfig) {
+    maxLimit = planConfig.maxOpportunityPostsPerMonth;
+  } else if (userPackageId === "premium" || req.user.isPremium) {
+    maxLimit = null;
+  }
+
+  if (maxLimit !== null) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const currentMonthCount = await opportunityCollection.countDocuments({
+      founder_email: req.user.email,
+      createdAt: { $gte: startOfMonth }
+    });
+
+    if (currentMonthCount >= maxLimit) {
+      return res.status(403).send({
+        message: `Opportunity post limit reached! You can only post ${maxLimit} opportunities per month on the ${planConfig?.name || "Free"} plan. Please upgrade your package to post more.`
+      });
+    }
+  }
+
+  const newOpportunity = {
