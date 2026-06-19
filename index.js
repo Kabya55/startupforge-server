@@ -688,3 +688,21 @@ app.post("/api/applications", verifyToken, async (req, res) => {
     res.send(result);
 
   } catch (err) {
+    console.error("Application submission error:", err);
+    res.status(500).send({ message: "Failed to submit application", error: err.message });
+  }
+});
+
+// GET /api/applications
+// Retrieve application history based on the user's role (collaborator: their applications; founder: applications to their startup; admin: all).
+app.get("/api/applications", verifyToken, async (req, res) => {
+  const query = {};
+
+  if (req.user.role === "collaborator") {
+    query.applicant_email = req.user.email;
+  } else if (req.user.role === "founder") {
+    query.founder_email = req.user.email;
+  } else if (req.user.role === "admin") {
+    // Admin pipeline
+  } else {
+    return res.status(403).send({ message: "forbidden access" });
