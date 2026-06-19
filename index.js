@@ -425,3 +425,14 @@ app.patch("/api/startups/:id/status", verifyToken, verifyAdmin, async (req, res)
     const result = await startupCollection.updateOne(filter, updateDoc);
 
     if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "Startup not found" });
+    }
+
+    res.send(result);
+  } catch (err) {
+    res.status(500).send({ message: "Status update failed", error: err.message });
+  }
+});
+
+// DELETE /api/startups/:id
+// Delete a startup profile. Validates that the logged-in founder is the owner.
