@@ -489,3 +489,72 @@ app.post("/api/opportunities", verifyToken, verifyFounder, async (req, res) => {
   }
 
   const newOpportunity = {
+    ...opportunity,
+    startup_id: startup._id.toString(),
+    startup_name: startup.startup_name,
+    // Save the industry value sent from the form
+    industry: opportunity.industry,
+    founder_email: req.user.email,
+    createdAt: new Date(),
+  };
+
+  const result = await opportunityCollection.insertOne(newOpportunity);
+  res.send(result);
+});
+
+// GET /api/opportunities
+// Query opportunities list with optional search filters, sorting, and pagination.
+app.get("/api/opportunities", async (req, res) => {
+  const query = {};
+  const conditions = [];
+
+  if (req.query.search) {
+    conditions.push({
+      $or: [
+        { role_title: { $regex: req.query.search, $options: "i" } },
+        { required_skills: { $regex: req.query.search, $options: "i" } }
+      ]
+    });
+  }
+
+  if (req.query.work_style) {
+    const workStyles = req.query.work_style.split(",").map(style => new RegExp(`^${style}$`, "i"));
+    conditions.push({ work_type: { $in: workStyles } });
+  }
+
+  if (req.query.work_type) {
+    const workTypes = req.query.work_type.split(",").map(type => new RegExp(`^${type}$`, "i"));
+    conditions.push({ work_type: { $in: workTypes } });
+  }
+
+  if (req.query.industry) {
+    const industries = req.query.industry.split(",").map(ind => new RegExp(`^${ind}$`, "i"));
+    conditions.push({ industry: { $in: industries } });
+  }
+
+  if (req.query.founder_email) {
+    conditions.push({ founder_email: req.query.founder_email });
+  }
+
+  if (req.query.startup_id) {
+    conditions.push({ startup_id: req.query.startup_id });
+  }
+
+  if (conditions.length > 0) {
+    query.$and = conditions;
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 6;
+  const skip = (page - 1) * limit;
+
+  const total = await opportunityCollection.countDocuments(query);
+  const cursor = opportunityCollection.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+  const opportunities = await cursor.toArray();
+
+  res.send({ total, opportunities });
+});
+
+// GET /api/opportunities/count
+// Retrieve the total count of opportunities in the database.
+app.get("/api/opportunities/count", async (req, res) => {
