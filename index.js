@@ -616,3 +616,75 @@ app.delete("/api/opportunities/:id", verifyToken, verifyFounder, async (req, res
     const result = await opportunityCollection.deleteOne(filter);
     res.send(result);
   } catch (err) {
+    res.status(400).send({ message: "Delete failed" });
+  }
+});
+
+// POST /api/applications
+// Submit a job application to a specific opportunity, checking monthly subscription application limits.
+app.post("/api/applications", verifyToken, async (req, res) => {
+  const application = req.body;
+  const applicant_email = req.user.email;
+
+  if (!applicant_email) {
+    return res.status(400).send({ message: "applicant_email is required" });
+  }
+
+  try {
+    const userPackageId = req.user.package || "collaborator_free";
+    const planConfig = await planCollection.findOne({ id: userPackageId });
+
+    let maxLimit = 3;
+    if (planConfig) {
+      maxLimit = planConfig.maxApplicationsPerMonth;
+    } else if (userPackageId === "premium" || req.user.isPremium) {
+      maxLimit = null;
+    }
+
+    if (maxLimit !== null) {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const currentMonthCount = await applicationCollection.countDocuments({
+        applicant_email: applicant_email,
+        applied_at: { $gte: startOfMonth }
+      });
+
+      if (currentMonthCount >= maxLimit) {
+        return res.status(403).send({
+          message: `Limit reached! You can only apply to ${maxLimit} opportunities per month on the ${planConfig?.name || "Free"} plan. Please upgrade your package to apply more.`
+        });
+      }
+    }
+
+    const existing = await applicationCollection.findOne({
+      opportunity_id: application.opportunity_id,
+      applicant_email: applicant_email
+    });
+
+    if (existing) {
+      return res.status(400).send({ message: "You have already applied to this opportunity." });
+    }
+
+    const opp = await opportunityCollection.findOne({ _id: new ObjectId(application.opportunity_id) });
+    if (!opp) {
+      return res.status(404).send({ message: "Opportunity not found" });
+    }
+
+    const newApplication = {
+      opportunity_id: application.opportunity_id,
+      role_title: opp.role_title,
+      startup_name: opp.startup_name,
+      founder_email: opp.founder_email,
+      applicant_email: applicant_email,
+      portfolio_link: application.portfolio_link,
+      motivation: application.motivation,
+      status: "Pending",
+      applied_at: new Date(),
+    };
+
+    const result = await applicationCollection.insertOne(newApplication);
+    res.send(result);
+
+  } catch (err) {
