@@ -577,3 +577,31 @@ app.get("/api/opportunities/:id", async (req, res) => {
     res.status(400).send({ message: "Invalid ID format" });
   }
 });
+
+// PATCH /api/opportunities/:id
+// Update a specific opportunity's details. Validates that the logged-in founder is the owner.
+app.patch("/api/opportunities/:id", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const update = req.body;
+    const filter = { _id: new ObjectId(id), founder_email: req.user.email };
+    const updateDoc = {
+      $set: {
+        role_title: update.role_title,
+        required_skills: update.required_skills,
+        work_type: update.work_type,
+        commitment_level: update.commitment_level,
+        deadline: update.deadline,
+        description: update.description,
+        minSalary: update.minSalary,
+        maxSalary: update.maxSalary,
+        work_style: update.work_style,
+        location: update.location,
+        industry: update.industry
+      }
+    };
+    const result = await opportunityCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Update failed" });
+  }
