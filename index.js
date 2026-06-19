@@ -558,3 +558,13 @@ app.get("/api/opportunities", async (req, res) => {
 // GET /api/opportunities/count
 // Retrieve the total count of opportunities in the database.
 app.get("/api/opportunities/count", async (req, res) => {
+  try {
+    const count = await opportunityCollection.countDocuments();
+    res.send({ totalOpportunities: count });
+  } catch (error) {
+    res.status(500).send({ message: "Failed to get count", error: error.message });
+  }
+});
+
+// GET /api/opportunities/:id
+// Retrieve a specific opportunity by its database ObjectId.
