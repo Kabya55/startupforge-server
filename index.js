@@ -605,3 +605,14 @@ app.patch("/api/opportunities/:id", verifyToken, verifyFounder, async (req, res)
   } catch (err) {
     res.status(400).send({ message: "Update failed" });
   }
+});
+
+// DELETE /api/opportunities/:id
+// Delete a specific opportunity. Validates that the logged-in founder is the owner.
+app.delete("/api/opportunities/:id", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id), founder_email: req.user.email };
+    const result = await opportunityCollection.deleteOne(filter);
+    res.send(result);
+  } catch (err) {
