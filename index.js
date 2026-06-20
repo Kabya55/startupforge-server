@@ -722,3 +722,9 @@ app.patch("/api/applications/:id/status", verifyToken, verifyFounder, async (req
     if (!["Accepted", "Rejected"].includes(status)) {
       return res.status(400).send({ message: "Invalid status value" });
     }
+
+    const filter = { _id: new ObjectId(id), founder_email: req.user.email };
+    const result = await applicationCollection.updateOne(filter, { $set: { status } });
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Status update failed" });
