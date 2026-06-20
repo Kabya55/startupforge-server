@@ -728,3 +728,22 @@ app.patch("/api/applications/:id/status", verifyToken, verifyFounder, async (req
     res.send(result);
   } catch (err) {
     res.status(400).send({ message: "Status update failed" });
+  }
+});
+
+// GET /api/payments
+// Retrieve list of all payment records (admin only).
+app.get("/api/payments", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await paymentCollection.find().sort({ paid_at: -1 }).toArray();
+  res.send(result);
+});
+
+// PATCH /api/users/profile
+// Update the current user's profile details (name, image, skills, bio).
+app.patch("/api/users/profile", verifyToken, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const { name, image, skills, bio } = req.body;
+    const updateDoc = {
+      $set: { name, image, skills, bio }
+    };
