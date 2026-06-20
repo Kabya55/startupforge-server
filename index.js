@@ -753,3 +753,25 @@ app.patch("/api/users/profile", verifyToken, async (req, res) => {
     res.status(400).send({ message: "Failed to update profile", error: err.message });
   }
 });
+
+// GET /api/users/profile
+// Retrieve current logged-in user profile details.
+app.get("/api/users/profile", verifyToken, async (req, res) => {
+  res.send(req.user);
+});
+
+// GET /api/users
+// Retrieve all registered user accounts (admin only).
+app.get("/api/users", verifyToken, verifyAdmin, async (req, res) => {
+  const result = await usersCollection.find().toArray();
+  res.send(result);
+});
+
+// PATCH /api/users/:id/block
+// Block a specific user by setting isBlocked flag (admin only).
+app.patch("/api/users/:id/block", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const result = await usersCollection.updateOne(filter, { $set: { isBlocked: true } });
+    res.send(result);
