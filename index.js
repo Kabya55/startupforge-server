@@ -775,3 +775,42 @@ app.patch("/api/users/:id/block", verifyToken, verifyAdmin, async (req, res) => 
     const filter = { _id: new ObjectId(id) };
     const result = await usersCollection.updateOne(filter, { $set: { isBlocked: true } });
     res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Failed to block user" });
+  }
+});
+
+// PATCH /api/users/:id/unblock
+// Unblock a specific blocked user (admin only).
+app.patch("/api/users/:id/unblock", verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const result = await usersCollection.updateOne(filter, { $set: { isBlocked: false } });
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Failed to unblock user" });
+  }
+});
+
+// GET /api/collaborator/stats
+// Retrieve stats overview (total applications and current month applications against subscription limits) for logged-in collaborator.
+app.get("/api/collaborator/stats", verifyToken, verifyCollaborator, async (req, res) => {
+  try {
+    const applicant_email = req.user.email;
+    const userPackageId = req.user.package || "collaborator_free";
+    const planConfig = await planCollection.findOne({ id: userPackageId });
+
+    let maxLimit = 3;
+    if (planConfig) {
+      maxLimit = planConfig.maxApplicationsPerMonth;
+    } else if (userPackageId === "premium" || req.user.isPremium) {
+      maxLimit = null;
+    }
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const currentMonthApplications = await applicationCollection.countDocuments({
+      applicant_email: applicant_email,
