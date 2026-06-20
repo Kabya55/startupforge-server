@@ -814,3 +814,44 @@ app.get("/api/collaborator/stats", verifyToken, verifyCollaborator, async (req, 
 
     const currentMonthApplications = await applicationCollection.countDocuments({
       applicant_email: applicant_email,
+      applied_at: { $gte: startOfMonth }
+    });
+
+    const totalApplications = await applicationCollection.countDocuments({
+      applicant_email: applicant_email
+    });
+
+    res.send({
+      currentMonthApplications,
+      maxLimit,
+      totalApplications,
+      planName: planConfig?.name || "Free"
+    });
+  } catch (error) {
+    console.error("Error fetching collaborator stats:", error);
+    res.status(500).send({ message: "Failed to fetch stats", error: error.message });
+  }
+});
+
+// GET /api/founder/stats
+// Retrieve stats overview (total opportunities posted, total applications received, and monthly limits) for logged-in founder.
+app.get("/api/founder/stats", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const email = req.user.email;
+    const userPackageId = req.user.package || "founder_free";
+    const planConfig = await planCollection.findOne({ id: userPackageId });
+
+    let maxLimit = 3;
+    if (planConfig) {
+      maxLimit = planConfig.maxOpportunityPostsPerMonth;
+    } else if (userPackageId === "premium" || req.user.isPremium) {
+      maxLimit = null;
+    }
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const currentMonthOpportunities = await opportunityCollection.countDocuments({
+      founder_email: email,
+      createdAt: { $gte: startOfMonth }
