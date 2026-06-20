@@ -747,3 +747,9 @@ app.patch("/api/users/profile", verifyToken, async (req, res) => {
     const updateDoc = {
       $set: { name, image, skills, bio }
     };
+    const result = await usersCollection.updateOne({ email }, updateDoc);
+    res.send(result);
+  } catch (err) {
+    res.status(400).send({ message: "Failed to update profile", error: err.message });
+  }
+});
