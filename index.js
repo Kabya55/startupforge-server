@@ -706,3 +706,19 @@ app.get("/api/applications", verifyToken, async (req, res) => {
     // Admin pipeline
   } else {
     return res.status(403).send({ message: "forbidden access" });
+  }
+
+  const cursor = applicationCollection.find(query).sort({ applied_at: -1 });
+  const result = await cursor.toArray();
+  res.send(result);
+});
+
+// PATCH /api/applications/:id/status
+// Update application status (Accepted/Rejected) (founder only).
+app.patch("/api/applications/:id/status", verifyToken, verifyFounder, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { status } = req.body;
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).send({ message: "Invalid status value" });
+    }
