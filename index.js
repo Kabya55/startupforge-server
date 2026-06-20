@@ -855,3 +855,40 @@ app.get("/api/founder/stats", verifyToken, verifyFounder, async (req, res) => {
     const currentMonthOpportunities = await opportunityCollection.countDocuments({
       founder_email: email,
       createdAt: { $gte: startOfMonth }
+    });
+
+    const totalOpportunities = await opportunityCollection.countDocuments({ founder_email: email });
+    const totalApplications = await applicationCollection.countDocuments({ founder_email: email });
+    const acceptedMembers = await applicationCollection.countDocuments({ founder_email: email, status: "Accepted" });
+
+    res.send({
+      totalOpportunities,
+      totalApplications,
+      acceptedMembers,
+      currentMonthOpportunities,
+      maxLimit,
+      planName: planConfig?.name || "Free"
+    });
+  } catch (error) {
+    console.error("Error fetching founder stats:", error);
+    res.status(500).send({ message: "Failed to fetch stats", error: error.message });
+  }
+});
+
+// GET /api/admin/stats
+// Retrieve global statistics (total users, startups, opportunities, and overall platform revenue) (admin only).
+app.get("/api/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
+  const totalUsers = await usersCollection.countDocuments();
+  const totalStartups = await startupCollection.countDocuments();
+  const totalOpportunities = await opportunityCollection.countDocuments();
+
+  const payments = await paymentCollection.find().toArray();
+  const totalRevenue = payments.reduce((sum, pay) => sum + (pay.amount || 0), 0);
+
+  res.send({
+    totalUsers,
+    totalStartups,
+    totalOpportunities,
+    totalRevenue
+  });
+});
