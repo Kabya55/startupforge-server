@@ -903,3 +903,12 @@ app.get("/api/applications/count", async (req, res) => {
     res.status(500).send({ message: "Failed to get count", error: error.message });
   }
 });
+
+// Start Server
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`StartupForge backend listening on port ${port}`);
+  });
+}
+
+module.exports = app;
