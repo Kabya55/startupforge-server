@@ -69,12 +69,19 @@ async function verifyToken(req, res, next) {
 
     // 3. Fallback: Ask Next.js Better Auth API directly (handles hashes/encryption)
     if (!session) {
-      const authUrl = process.env.CLIENT_URL;
+      let authUrl = process.env.CLIENT_URL || "http://localhost:3000";
+      // Fallback to request origin if CLIENT_URL is local/missing but the request comes from production
+      if (req.headers.origin && (!process.env.CLIENT_URL || process.env.CLIENT_URL.includes("localhost")) && !req.headers.origin.includes("localhost")) {
+        authUrl = req.headers.origin;
+      }
+      // Ensure no trailing slash
+      authUrl = authUrl.replace(/\/$/, "");
+
       try {
         const response = await fetch(`${authUrl}/api/auth/get-session`, {
           headers: {
             "Authorization": `Bearer ${token}`,
-            "cookie": `better-auth.session_token=${token}`
+            "cookie": `better-auth.session_token=${token}; __Secure-better-auth.session_token=${token}`
           }
         });
         const authData = await response.json();
