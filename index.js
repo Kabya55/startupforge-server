@@ -893,7 +893,6 @@ app.get("/api/admin/stats", verifyToken, verifyAdmin, async (req, res) => {
   });
 });
 
-// GET /api/applications/count
 // Retrieve the total count of applications in the database.
 app.get("/api/applications/count", async (req, res) => {
   try {
