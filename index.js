@@ -130,7 +130,11 @@ async function verifyToken(req, res, next) {
     next();
   } catch (error) {
     console.error("Auth middleware error:", error);
-    res.status(500).json({ error: "Internal server error during authentication" });
+    res.status(500).json({ 
+      error: "Internal server error during authentication", 
+      details: error.message,
+      stack: error.stack
+    });
   }
 }
 
